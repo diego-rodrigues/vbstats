@@ -1,0 +1,200 @@
+<!doctype html>
+<html lang="pt"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Scout Vôlei</title>
+<style>
+:root{--bg:#f4f5f7;--card:#fff;--tx:#14171c;--mu:#6b7280;--ac:#e8590c;--bd:#d9dde3;--ok:#2f9e44;--bad:#e03131;color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#101216;--card:#1b1f26;--tx:#eceff4;--mu:#9aa3b0;--bd:#2d333d;color-scheme:dark}}
+:root[data-theme="dark"]{--bg:#101216;--card:#1b1f26;--tx:#eceff4;--mu:#9aa3b0;--bd:#2d333d;color-scheme:dark}
+html{scroll-padding-top:env(safe-area-inset-top,0px)}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+body{margin:0;background:var(--bg);color:var(--tx);font:16px system-ui,sans-serif;-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+#app{max-width:520px;margin:0 auto;padding:10px;min-height:100dvh;display:flex;flex-direction:column;gap:10px}
+h2,h3{margin:0}h3{font-size:15px;color:var(--mu)}
+button{font:inherit;color:var(--tx);background:var(--card);border:1px solid var(--bd);border-radius:12px;padding:8px;min-height:48px}
+button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+button.go{background:var(--ok);color:#fff;border-color:var(--ok);min-height:54px;font-weight:700}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:10px;display:flex;flex-direction:column;gap:8px}
+.card button{background:var(--bg)}
+.r{display:flex;gap:6px;align-items:center}.r>button{flex:1}
+.r .z{width:30px;color:var(--mu);font-size:13px}
+input,select,textarea{font:inherit;color:var(--tx);background:var(--bg);border:1px solid var(--bd);border-radius:10px;padding:8px;min-width:0;-webkit-user-select:text;user-select:text}
+input.n{width:56px}input.nm{flex:1}select{width:104px}
+.mu{color:var(--mu);font-size:14px}.c{text-align:center}
+.hd{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.sc{display:flex;align-items:center;gap:8px}.sc b{font-size:34px}.sc small{color:var(--mu)}
+.bt{display:flex;gap:6px}
+.court{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.p{min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;position:relative;padding:4px}
+.p b{font-size:28px;line-height:1}.p small{font-size:13px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.p i{font-size:11px;opacity:.75;font-style:normal}
+.sv{position:absolute;top:2px;right:4px;font-size:13px}
+.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.res{display:flex;gap:8px;min-height:56px;align-items:center}.res button{flex:1;min-height:56px;font-weight:700}
+.rP{border-color:var(--ok)!important}.rE{border-color:var(--bad)!important}
+.ev{display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px}.ev button{font-size:14px}.dv{display:flex;align-items:center;gap:8px;color:var(--mu);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}.dv::before,.dv::after{content:"";flex:1;height:3px;border-radius:2px;background:var(--bd)}
+.log{word-break:break-word;font-family:ui-monospace,monospace;min-height:20px}
+.mo{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:14px;z-index:5}
+.mo .card{width:100%;max-width:480px}
+textarea{width:100%}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
+</style></head><body>
+<div id="app"></div><div id="toast"></div>
+<script>
+const $=s=>document.querySelector(s);
+const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const POS=[['levantador','Levantador','Lev'],['ponteiro','Ponteiro','Pon'],['central','Central','Cen'],['oposto','Oposto','Opo'],['libero','Líbero','Lib']];
+const pa=v=>(POS.find(x=>x[0]==v)||[])[2]||'';
+const ACT=[['S','Saque'],['L','Levantamento'],['R','Recepção'],['A','Ataque'],['B','Bloqueio'],['D','Defesa']];
+const RES={S:[['P','Ponto'],['C','Contínuo'],['E','Erro']],L:[['C','Contínuo'],['E','Erro'],['0','Zero']],R:[['P','Perfeito'],['C','Bom'],['E','Erro'],['0','Zero']],A:[['P','Ponto'],['C','Contínuo'],['E','Erro']],B:[['P','Ponto']],D:[['C','Contínuo']]};
+const ld=(k,d)=>{try{return JSON.parse(localStorage.getItem(k))||d}catch(e){return d}};
+const sv=(k,v)=>{try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}};
+const nn=n=>String(n).padStart(2,'0');
+let imp='',rosters=ld('sv_rosters',{}),rname='',rtxt='';
+const cl=o=>JSON.parse(JSON.stringify(o));
+const rtext=r=>r.starters.map((p,i)=>`${i<6?i+1:'L'};${p.n};${p.name};${p.pos}`).concat(r.bench.map(p=>`R;${p.n};${p.name};${p.pos}`)).join('\n');
+function rparse(txt){
+ const st=DEF.map(p=>({n:'',name:'',pos:p})),bench=[];let seq=0;
+ String(txt).split(/\r?\n/).map(l=>l.trim()).filter(Boolean).forEach(l=>{
+  const f=l.split(/[;\t]/).map(x=>x.trim());let z;
+  if(f.length>=4&&/^([1-6]|L|R)$/i.test(f[0]))z=f.shift().toUpperCase();else z=seq<6?String(seq+1):seq==6?'L':'R';
+  seq++;
+  const n=(f[0]||'').replace(/\D/g,''),pt=(f[2]||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,''),pp=POS.find(o=>pt.startsWith(o[0].slice(0,3))),nm=f[1]||'';
+  if(z=='L')st[6]={n:n,name:nm,pos:'libero'};
+  else if(z=='R'){if(n!=='')bench.push({n:n,name:nm,pos:pp?pp[0]:'ponteiro'})}
+  else st[+z-1]={n:n,name:nm,pos:pp?pp[0]:DEF[+z-1]};
+ });
+ return st.concat(bench).some(p=>p.n!=='')?{starters:st,bench:bench}:null}
+function alignServe(n){const i=G.court.findIndex(x=>x.n==n);if(i<0)return false;if(i>0)G.court=G.court.slice(i).concat(G.court.slice(0,i));G.serving=true;return i>0}
+function build(init,codes){
+ const P=q=>({n:+q.n,name:q.name||'',pos:q.pos}),s=init.starters,six=s.slice(0,6);
+ if(six.some(p=>p.n===''||isNaN(+p.n)))throw new Error('Preencha a escalação inicial');
+ G={court:six.map(P),libero:s[6].n!==''?P(s[6]):null,bench:init.bench.filter(p=>p.n!=='').map(P),us:0,them:0,serving:init.serve,log:[],hist:[],init:JSON.parse(JSON.stringify(init))};
+ sel=sugg();let out=null;
+ for(let t of String(codes).toUpperCase().split(/[\s,;]+/).filter(Boolean)){
+  if(!/^(\d+[SLRABD][PCE0]|\d+[OI]|\/|-)$/.test(t))throw new Error('Código inválido: '+t);
+  if(t!='/'&&t!='-')t=nn(parseInt(t))+t.replace(/^\d+/,'');
+  snap();G.log.push(t);
+  if(t=='/')end('them');else if(t=='-')end('us');
+  else{const n=parseInt(t),k=t.slice(-1);
+   if(k=='O')out=n;
+   else if(k=='I'){const bi=G.bench.findIndex(x=>x.n==n),tp=G.court.concat(G.libero||[]).find(x=>x.n==out);if(bi<0||!tp)throw new Error('Substituição inválida: '+t);const inn=G.bench[bi];G.bench.splice(bi,1,tp);if(G.libero&&G.libero.n==out)G.libero=inn;else G.court=G.court.map(x=>x.n==out?inn:x);out=null}
+   else{const a=t[t.length-2];if(a=='S')alignServe(n);const o=outc(a,k);if(o)end(o)}}
+ }
+ sel=sugg()}
+function loadCodes(init,codes,k){const old=G;try{build(init,codes);G.k=k||0;return true}catch(e){G=old;toast(e.message);return false}}
+const DEF=['levantador','ponteiro','central','oposto','ponteiro','central','libero'];
+let setup=ld('sv_setup',null)||{starters:DEF.map(p=>({n:'',name:'',pos:p})),bench:[],serve:true};
+let G=ld('sv_game',null),sets=ld('sv_sets',{}),view=G?'game':'setup',sel={p:null,a:null},modal=null,subMode=false,tm,lp=false,tt;
+function toast(m){const t=$('#toast');t.textContent=m;t.style.opacity=1;clearTimeout(tt);tt=setTimeout(()=>t.style.opacity=0,1800)}
+async function cp(t){try{await navigator.clipboard.writeText(t);toast('Copiado')}catch(e){const a=document.createElement('textarea');a.value=t;document.body.appendChild(a);a.select();let ok=false;try{ok=document.execCommand('copy')}catch(_){}a.remove();toast(ok?'Copiado':'Copie o texto manualmente')}}
+function wa(t){const w=window.open('https://wa.me/?text='+encodeURIComponent(t),'_blank');if(!w)toast('Não foi possível abrir o WhatsApp')}
+
+/* ---- lógica de jogo ---- */
+const lb=()=>G.liberoOff?null:G.libero;
+function eff(){const c=G.court.slice(),l=lb();if(l)for(const i of [4,5])if(c[i].pos=='central'){c[i]=l;break}return c}
+const pByN=n=>eff().find(x=>x.n==n);
+const sugg=()=>{if(G.serving)return{p:G.court[0].n,a:'S'};const l=lb();return{p:l&&eff().some(x=>x.n==l.n)?l.n:null,a:'R'}};
+function dfn(e){const l=lb();return l&&e.some(x=>x.n==l.n)?l.n:G.court[0].n}
+function next(pl,a,r){
+ const e=eff(),st=e.find(x=>x.pos=='levantador'),L=lb();
+ if(a=='S')return{p:dfn(e),a:'D'};
+ if((a=='R'||a=='D')&&r!='0')return pl.pos=='levantador'?{p:L?L.n:null,a:'L'}:{p:st?st.n:null,a:'L'};
+ if(a=='R'||(a=='L'&&r=='0')||a=='A')return{p:dfn(e),a:'D'};
+ if(a=='L'){const f=[1,2,3].map(i=>e[i]),x=f.find(q=>q.pos=='ponteiro')||f.find(q=>q.pos=='oposto');return{p:x?x.n:null,a:'A'}}
+ return{p:null,a:null}}
+const outc=(a,r)=>(r=='P'&&(a=='S'||a=='A'||a=='B'))?'us':r=='E'?'them':null;
+function end(o){
+ if(o=='us'){G.us++;if(!G.serving){G.serving=true;const c=G.court;G.court=[c[1],c[2],c[3],c[4],c[5],c[0]]}}
+ else{G.them++;G.serving=false}
+ sel=sugg()}
+function snap(){G.hist.push(JSON.stringify({court:G.court,bench:G.bench,libero:G.libero,us:G.us,them:G.them,serving:G.serving,log:G.log,sel:sel}))}
+function act(r){const pl=pByN(sel.p);if(!pl||!sel.a)return;snap();if(sel.a=='S'&&alignServe(pl.n))toast('Rodízio ajustado');G.log.push(nn(pl.n)+sel.a+r);const o=outc(sel.a,r);if(o)end(o);else sel=next(pl,sel.a,r)}
+function openSub(n){if(!G.bench.length)return toast('Sem reservas no banco');modal={t:'sub',t2:pByN(n)}}
+function doSub(bi){const t=modal.t2,inn=G.bench[bi];snap();G.log.push(nn(t.n)+'O',nn(inn.n)+'I');G.bench.splice(bi,1,t);
+ if(G.libero&&G.libero.n==t.n)G.libero=inn;else G.court=G.court.map(x=>x.n==t.n?inn:x);
+ if(sel.p==t.n)sel.p=inn.n;modal=null}
+
+/* ---- telas ---- */
+function row(g,i,p,lbl){const ro=g=='s'&&i==6;return `<div class="r"><span class="z">${lbl}</span><input class="n" inputmode="numeric" placeholder="Nº" data-g="${g}" data-i="${i}" data-f="n" value="${esc(p.n)}"><input class="nm" placeholder="Nome" data-g="${g}" data-i="${i}" data-f="name" value="${esc(p.name)}"><select data-g="${g}" data-i="${i}" data-f="pos" ${ro?'disabled':''}>${POS.map(o=>`<option value="${o[0]}" ${o[0]==p.pos?'selected':''}>${o[1]}</option>`).join('')}</select>${g=='b'?`<button style="flex:0 0 44px" data-x="delb" data-i="${i}">✕</button>`:''}</div>`}
+function setupHTML(){
+ const sl=Object.keys(sets).sort().map(k=>`<div class="card" style="background:transparent"><div class="r"><b>Set ${k}</b><span class="mu">${sets[k].us}×${sets[k].them}</span></div><div class="r"><button data-x="cont" data-i="${k}">▶ Continuar</button><button data-x="cps" data-i="${k}">Copiar</button><button data-x="shs" data-i="${k}">WhatsApp</button><button style="flex:0 0 44px" data-x="dels" data-i="${k}">✕</button></div></div>`).join('');
+ return `<h2>🏐 Scout de Vôlei</h2>
+ <div class="card"><h3>Em quadra · ordem do rodízio (P1 saca)</h3>${setup.starters.map((p,i)=>row('s',i,p,i<6?'P'+(i+1):'Líb')).join('')}</div>
+ <div class="card"><h3>Banco de reservas</h3>${setup.bench.map((p,i)=>row('b',i,p,'Res')).join('')}<button data-x="addb">+ Reserva</button></div>
+ <div class="card"><h3>Elencos salvos</h3><div class="r"><input class="nm" id="rname" placeholder="Nome do elenco" value="${esc(rname)}"><button style="flex:0 0 auto" data-x="rsave">Salvar</button></div>${Object.keys(rosters).map(k=>`<div class="r"><b style="flex:1">${esc(k)}</b><button data-x="rload" data-i="${esc(k)}">Carregar</button><button data-x="rcp" data-i="${esc(k)}">Copiar</button><button style="flex:0 0 44px" data-x="rdel" data-i="${esc(k)}">✕</button></div>`).join('')}<textarea id="rimp" rows="3" placeholder="Colar elenco: um jogador por linha, Nº;Nome;Posição">${esc(rtxt)}</textarea><div class="r"><button data-x="rimp">Importar elenco</button><button data-x="rcpcur">Copiar elenco atual</button></div></div>
+ <label class="r"><input type="checkbox" id="srv" ${setup.serve?'checked':''}> Começamos sacando</label>
+ <button class="go" data-x="start">Iniciar partida</button>
+ <div class="card"><h3>Importar códigos (usa a escalação acima)</h3><textarea id="imp" rows="3" placeholder="Ex.: 01SC 07DC 03LC 09AP /">${esc(imp)}</textarea><button data-x="impgo">Continuar a partir dos códigos</button></div>
+ ${sl?`<div class="card"><h3>Sets salvos</h3>${sl}<button data-x="cpall">Copiar todos</button></div>`:''}`}
+function gameHTML(){
+ const e=eff(),sc=G.serving;
+ const cell=i=>{const p=e[i];return `<button class="p${sel.p==p.n?' on':''}" data-x="p" data-n="${p.n}">${i==0&&sc?'<span class="sv">🏐</span>':''}<b>${p.n}</b><small>${esc(p.name)}</small><i>${pa(p.pos)}</i></button>`};
+ const rs=sel.a&&sel.p!=null?RES[sel.a].map(([c,l])=>`<button class="r${c}" data-x="r" data-v="${c}">${l}</button>`).join(''):'<span class="mu c" style="flex:1">Escolha jogador e ação</span>';
+ return `<div class="hd"><div class="sc"><small>NÓS</small><b>${G.us}</b><span>×</span><b>${G.them}</b><small>ELES</small></div><div class="bt"><button data-x="undo">↶</button><button data-x="fin">Finalizar set</button></div></div>
+ <div class="mu c">${sc?'Nós sacamos':'Recepção'}${subMode?' · toque em quem sai':''} · segure um jogador p/ substituir</div>
+ <div class="court">${[3,2,1,4,5,0].map(cell).join('')}</div>
+ <div class="dv">Ação</div><div class="acts">${ACT.map(([c,l])=>`<button class="${sel.a==c?'on':''}" data-x="a" data-v="${c}">${l}</button>`).join('')}</div>
+ <div class="dv">Resultado</div><div class="res">${rs}</div>
+ <div class="dv">Eventos</div><div class="ev"><button data-x="ev" data-v="/">Ponto adv. /</button><button data-x="ev" data-v="-">Erro adv. -</button><button class="${subMode?'on':''}" data-x="subm">Subst.</button>${G.libero?`<button class="${G.liberoOff?'':'on'}" data-x="lib">Líbero ${G.liberoOff?'fora':'em jogo'}</button>`:''}</div>
+ <div class="log mu">${G.log.slice(-12).join(' ')}</div>`}
+function modalHTML(){
+ if(!modal)return'';
+ if(modal.t=='sub')return `<div class="mo"><div class="card"><h3>Entra no lugar do ${modal.t2.n}</h3>${G.bench.map((p,i)=>`<button data-x="pick" data-i="${i}">${p.n} ${esc(p.name)} · ${pa(p.pos)}</button>`).join('')}<button data-x="close">Cancelar</button></div></div>`;
+ return `<div class="mo"><div class="card"><h3>Finalizar set · ${G.us}×${G.them}</h3><div class="r">${[1,2,3,4,5].map(k=>`<button class="${modal.k==k?'on':''}" data-x="setn" data-i="${k}">${k}º${sets[k]?' ✓':''}</button>`).join('')}</div><textarea readonly rows="4">${G.log.join(' ')}</textarea><div class="r"><button data-x="cp">Copiar</button><button data-x="sh">WhatsApp</button></div><button class="go" data-x="save">Salvar como ${modal.k}º set e encerrar</button><button data-x="close">Voltar ao jogo</button><button data-x="disc">${modal.d?'Confirmar descarte':'Descartar partida'}</button></div></div>`}
+function render(){$('#app').innerHTML=view=='setup'?setupHTML():gameHTML()+modalHTML()}
+
+/* ---- eventos ---- */
+['input','change'].forEach(ev=>document.addEventListener(ev,e=>{const t=e.target;
+ if(t.id=='rname'){rname=t.value;return}
+ if(t.id=='rimp'){rtxt=t.value;return}
+ if(t.id=='imp'){imp=t.value;return}
+ if(t.id=='srv'){setup.serve=t.checked;sv('sv_setup',setup);return}
+ const g=t.dataset.g;if(!g)return;(g=='s'?setup.starters:setup.bench)[+t.dataset.i][t.dataset.f]=t.value;sv('sv_setup',setup)}));
+document.addEventListener('contextmenu',e=>e.preventDefault());
+document.addEventListener('pointerdown',e=>{lp=false;const b=e.target.closest('[data-x=p]');if(!b)return;tm=setTimeout(()=>{lp=true;openSub(+b.dataset.n);render()},600)});
+['pointerup','pointercancel'].forEach(ev=>document.addEventListener(ev,()=>clearTimeout(tm)));
+document.addEventListener('click',e=>{
+ const b=e.target.closest('[data-x]');if(!b)return;
+ if(lp){lp=false;return}
+ const x=b.dataset.x,v=b.dataset.v,i=b.dataset.i;
+ switch(x){
+ case 'addb':setup.bench.push({n:'',name:'',pos:'ponteiro'});sv('sv_setup',setup);break;
+ case 'delb':setup.bench.splice(+i,1);sv('sv_setup',setup);break;
+ case 'start':{const s=setup.starters,six=s.slice(0,6);
+  if(six.some(p=>p.n===''||isNaN(+p.n)))return toast('Preencha o número dos 6 titulares');
+  const all=[...s,...setup.bench].filter(p=>p.n!=='').map(p=>+p.n);
+  if(new Set(all).size<all.length)return toast('Há números repetidos');
+  const P=q=>({n:+q.n,name:q.name||'',pos:q.pos});
+  G={court:six.map(P),libero:s[6].n!==''?P(s[6]):null,bench:setup.bench.filter(p=>p.n!=='').map(P),us:0,them:0,serving:setup.serve,log:[],hist:[],init:JSON.parse(JSON.stringify(setup))};
+  sel=sugg();view='game';break}
+ case 'cont':{const o=sets[i];if(!loadCodes(o.init||setup,o.codes,+i))return;view='game';break}
+ case 'impgo':if(!imp.trim())return toast('Cole os códigos');if(!loadCodes(setup,imp,0))return;view='game';break;
+ case 'rsave':{const k=rname.trim();if(!k)return toast('Dê um nome ao elenco');rosters[k]=cl({starters:setup.starters,bench:setup.bench});sv('sv_rosters',rosters);toast('Elenco salvo');break}
+ case 'rload':{const r=rosters[i];if(!r)return;setup.starters=cl(r.starters);setup.bench=cl(r.bench);sv('sv_setup',setup);break}
+ case 'rdel':delete rosters[i];sv('sv_rosters',rosters);break;
+ case 'rcp':cp(rtext(rosters[i]));return;
+ case 'rcpcur':cp(rtext(setup));return;
+ case 'rimp':{const r=rparse(rtxt);if(!r)return toast('Elenco não reconhecido');setup.starters=r.starters;setup.bench=r.bench;sv('sv_setup',setup);rtxt='';toast('Elenco importado');break}
+ case 'cps':cp(sets[i].codes);return;
+ case 'shs':wa(sets[i].codes);return;
+ case 'dels':delete sets[i];sv('sv_sets',sets);break;
+ case 'cpall':cp(Object.keys(sets).sort().map(k=>`Set ${k} (${sets[k].us}x${sets[k].them})\n${sets[k].codes}`).join('\n\n'));return;
+ case 'p':{const n=+b.dataset.n;if(subMode){subMode=false;openSub(n);break}sel.p=n;if(pByN(n).pos=='levantador')sel.a='L';break}
+ case 'a':sel.a=v;break;
+ case 'r':act(v);break;
+ case 'ev':snap();G.log.push(v);end(v=='/'?'them':'us');break;
+ case 'subm':subMode=!subMode;break;
+ case 'lib':G.liberoOff=!G.liberoOff;sel=sugg();break;
+ case 'undo':if(G.hist.length){const s=JSON.parse(G.hist.pop()),q=s.sel;delete s.sel;Object.assign(G,s);sel=q}break;
+ case 'fin':modal={t:'fin',k:G.k||[1,2,3,4,5].find(k=>!sets[k])||1};break;
+ case 'pick':doSub(+i);break;
+ case 'close':modal=null;break;
+ case 'setn':modal.k=+i;break;
+ case 'cp':cp(G.log.join(' '));return;
+ case 'sh':wa(G.log.join(' '));return;
+ case 'save':sets[modal.k]={us:G.us,them:G.them,codes:G.log.join(' '),init:G.init||setup};sv('sv_sets',sets);G=null;modal=null;view='setup';break;
+ case 'disc':if(modal.d){G=null;modal=null;view='setup'}else modal.d=1;break;
+ }
+ sv('sv_game',G);render()});
+render();
+</script></body></html>
