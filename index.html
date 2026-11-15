@@ -35,7 +35,7 @@ input.n{width:56px}input.nm{flex:1}select{width:104px}
 .log{word-break:break-word;font-family:ui-monospace,monospace;min-height:20px}
 .mo{position:fixed;inset:0;background:rgba(0,0,0,.55);display:flex;align-items:center;justify-content:center;padding:14px;z-index:5}
 .mo .card{width:100%;max-width:480px}
-textarea{width:100%}.rt{overflow:visible}#app.w{max-width:1000px}.rt table{width:100%}.rt .bl{border-left:2px solid var(--tx)}@media(max-width:700px){.rt table{font-size:10px}.rt th,.rt td{padding:2px 3px}}.rt table{border-collapse:collapse;font-size:12px;white-space:nowrap;background:var(--card)}.rt th,.rt td{border:1px solid var(--bd);padding:3px 6px;text-align:center}.rt th{background:var(--bd)}.rt td.l{text-align:left}
+textarea{width:100%}.rt{overflow:visible}#app.w{max-width:1000px}.rt table{width:100%}.rt .bl{border-left:2px solid var(--tx)}.fl{display:flex;flex-direction:column;gap:2px;margin-bottom:6px}.fr{display:flex;align-items:center;gap:6px}.fr b{width:90px;font-size:12px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis}.fc{flex:1;display:flex;gap:1px}.fc i{flex:1;height:16px;background:var(--bd);opacity:.5}.fc i.u{background:#FFA500;opacity:1}.fc i.t{background:var(--tx);opacity:1}.fc s{flex:1;font-size:9px;text-align:center;text-decoration:none;color:var(--mu);font-size:10px;font-weight:700}.fc s.u{color:#FFA500}.fc s.t{color:var(--tx)}@media(max-width:700px){.rt table{font-size:10px}.rt th,.rt td{padding:2px 3px}}.rt table{border-collapse:collapse;font-size:12px;white-space:nowrap;background:var(--card)}.rt th,.rt td{border:1px solid var(--bd);padding:3px 6px;text-align:center}.rt th{background:var(--bd)}.rt td.l{text-align:left}
 #toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#222;color:#fff;padding:10px 16px;border-radius:20px;opacity:0;transition:opacity .2s;pointer-events:none;z-index:9}
 </style></head><body>
 <div id="app"></div><div id="toast"></div>
@@ -64,15 +64,17 @@ function rparse(txt){
   else st[+z-1]={n:n,name:nm,pos:pp?pp[0]:DEF[+z-1]};
  });
  return st.concat(bench).some(p=>p.n!=='')?{starters:st,bench:bench}:null}
-const KS=['s','se','sa','r','re','rp','rb','a','ae','ap','b','e','pt'],Z=()=>Object.fromEntries(KS.map(k=>[k,0])),add=(a,b)=>{if(b)KS.forEach(k=>a[k]+=b[k]);return a};
+const KS=['s','se','sa','r','re','rp','rb','a','ae','ap','b','e','pt','lv','le','lp'],Z=()=>Object.fromEntries(KS.map(k=>[k,0])),add=(a,b)=>{if(b)KS.forEach(k=>a[k]+=b[k]);return a};
 function stat(codes){const m={},g=n=>m[n]||(m[n]=Z());
- for(const t of codes.split(/\s+/)){const x=/^(\d+)([SLRABD])([PCE0])$/.exec(t);if(!x)continue;const o=g(+x[1]),a=x[2],r=x[3];
+ const tk=codes.split(/\s+/);for(let q=0;q<tk.length;q++){const t=tk[q],x=/^(\d+)([SLRABD])([PCE0])$/.exec(t);if(!x)continue;const o=g(+x[1]),a=x[2],r=x[3];
   if(r=='E')o.e++;
+  if(a=='L'){o.lv++;if(r=='E')o.le++;else if(/^\d+AP$/.test(tk[q+1]||''))o.lp++}
   if(a=='S'){o.s++;if(r=='E')o.se++;if(r=='P'){o.sa++;o.pt++}}
   else if(a=='R'){o.r++;if(r=='E')o.re++;if(r=='P')o.rp++;if(r=='C')o.rb++}
   else if(a=='A'){o.a++;if(r=='E')o.ae++;if(r=='P'){o.ap++;o.pt++}}
   else if(a=='B'&&r=='P'){o.b++;o.pt++}}
  return m}
+function pts(codes){const a=[];for(const t of codes.split(/\s+/)){if(t=='/')a.push(0);else if(t=='-')a.push(1);else{const x=/^\d+([SLRABD])([PCE0])$/.exec(t);if(x){const o=outc(x[1],x[2]);if(o)a.push(o=='us'?1:0)}}}return a}
 function lineup(codes,ini){const p={},s=ini.starters;s.slice(0,6).forEach((q,i)=>{if(q.n!=='')p[+q.n]=i+1});if(s[6]&&s[6].n!=='')p[+s[6].n]='*';(codes.match(/\d+I/g)||[]).forEach(t=>{const n=parseInt(t);if(!(n in p))p[n]='*'});return p}
 function reportHTML(){
  const ks=Object.keys(sets).sort(),info={},sm={},ln={};
@@ -80,17 +82,21 @@ function reportHTML(){
  if(!ks.length)return back+'<p class="mu">Nenhum set salvo ainda.</p>';
  ks.forEach(k=>{const o=sets[k],ini=o.init||setup;[...ini.starters,...ini.bench].forEach(q=>{if(q.n!==''&&!info[+q.n])info[+q.n]={name:q.name,pos:q.pos}});sm[k]=stat(o.codes);ln[k]=lineup(o.codes,ini)});
  const nums=[...new Set(ks.flatMap(k=>Object.keys(sm[k]).concat(Object.keys(ln[k])).map(Number)))].sort((a,b)=>a-b);
- const H2=['Tot','W-L','Tot','Err','Ace','Tot','Err','Pos%','Exc%','Tot','Err','Pts','Pts%','Efic%','Pts'];
+ const H2=['Tot','W-L','Tot','Err','Ace','Tot','Err','Pos%','Exc%','Tot','Err','Pts','Pts%','Efic%','Pts','Tot','Err','Efic%'];
  const sg=v=>v>0?'+'+v:v,pc=(a,b)=>b?Math.round(a*100/b)+'%':'.',c=v=>v||'.',g=(t,n)=>`<th class="bl" colspan="${n}">${t}</th>`;
- const cl=o=>[c(o.pt),sg(o.pt-o.e),c(o.s),c(o.se),c(o.sa),c(o.r),c(o.re),pc(o.rp+o.rb,o.r),pc(o.rp,o.r),c(o.a),c(o.ae),c(o.ap),pc(o.ap,o.a),pc(o.ap-o.ae,o.a),c(o.b)];
+ const cl=o=>[c(o.pt),sg(o.pt-o.e),c(o.s),c(o.se),c(o.sa),c(o.r),c(o.re),pc(o.rp+o.rb,o.r),pc(o.rp,o.r),c(o.a),c(o.ae),c(o.ap),pc(o.ap,o.a),pc(o.ap-o.ae,o.a),c(o.b),c(o.lv),c(o.le),pc(o.lp-o.le,o.lv)];
  const tr=(l,cs,bs)=>`<tr><td class="l">${l}</td>${cs.map((x,i)=>`<td${bs.has(i)?' class="bl"':''}>${x}</td>`).join('')}</tr>`;
- function tbl(ti,list,wp){const T=Z(),o0=wp?ks.length:0,bs=new Set([...(wp?[0]:[]),o0,o0+2,o0+5,o0+9,o0+14]);
+ function tbl(ti,list,wp){const T=Z(),o0=wp?ks.length:0,bs=new Set([...(wp?[0]:[]),o0,o0+2,o0+5,o0+9,o0+14,o0+15]);
   const rows=list.map(([n,o,ps])=>{add(T,o);const i=info[n]||{};return tr(`${n} ${esc(i.name||'')}${i.pos=='libero'?' (L)':''}`,[...ps,...cl(o)],bs)}).join('');
-  return `<h3>${ti}</h3><div class="rt"><table><tr><th rowspan="2">${team}</th>${wp?g('Set',ks.length):''}${g('Pontos',2)}${g('Saque',3)}${g('Recepção',4)}${g('Ataque',5)}${g('Bloq',1)}</tr><tr>${(wp?ks:[]).concat(H2).map((x,i)=>`<th${bs.has(i)?' class="bl"':''}>${x}</th>`).join('')}</tr>${rows}${tr('<b>Total equipe</b>',[...(wp?ks.map(()=>''):[]),...cl(T)],bs)}</table></div>`}
+  return `<h3>${ti}</h3><div class="rt"><table><tr><th rowspan="2">${team}</th>${wp?g('Set',ks.length):''}${g('Pontos',2)}${g('Saque',3)}${g('Recepção',4)}${g('Ataque',5)}${g('Bloq',1)}${g('Levant.',3)}</tr><tr>${(wp?ks:[]).concat(H2).map((x,i)=>`<th${bs.has(i)?' class="bl"':''}>${x}</th>`).join('')}</tr>${rows}${tr('<b>Total equipe</b>',[...(wp?ks.map(()=>''):[]),...cl(T)],bs)}</table></div>`}
  const ws=ks.filter(k=>sets[k].us>sets[k].them).length,opp=esc(sets[ks[0]].opp||setup.opp||'Adversário'),team=esc(sets[ks[0]].team||'MBB');
  const head=`<div class="card"><h3>Resultado · ${sets[ks[0]].date||new Date().toLocaleDateString('pt-BR')}</h3><div class="r"><b style="flex:1">${team}</b><b>${ws}</b></div><div class="r"><b style="flex:1">${opp}</b><b>${ks.length-ws}</b></div>${ks.map(k=>`<div class="r"><span>Set ${k}</span><b style="flex:1;text-align:right">${sets[k].us} - ${sets[k].them}</b></div>`).join('')}</div>`;
+ function flow(k){const a=pts(sets[k].codes);if(!a.length)return'';
+  const best=[0,0];let prev=-1,cur=0;a.forEach(v=>{cur=v==prev?cur+1:1;prev=v;if(cur>best[v])best[v]=cur});
+  const row=v=>`<div class="fr"><b>${v?team:opp}</b><div class="fc">${a.map(x=>`<i class="${x==v?(v?'u':'t'):''}"></i>`).join('')}</div></div>`;
+  return `<div class="fl"><h3>Evolução dos pontos · maior sequência: ${team} ${best[1]} · ${opp} ${best[0]}</h3>${row(1)}${row(0)}<div class="fr"><b></b><div class="fc">${(c=>a.map(x=>{c[x]++;return `<s class="${x?'u':'t'}">${c[x]==8||c[x]==16?c[x]:''}</s>`}).join(''))([0,0])}</div></div></div>`}
  const tot=nums.map(n=>{const o=Z();ks.forEach(k=>add(o,sm[k][n]));return [n,o,ks.map(k=>ln[k][n]==null?'':ln[k][n])]});
- return back+head+tbl('Total do jogo',tot,true)+ks.map(k=>tbl(`Set ${k} · ${sets[k].us}×${sets[k].them}`,nums.filter(n=>n in ln[k]||sm[k][n]).map(n=>[n,sm[k][n]||Z(),[]]),false)).join('')}
+ return back+head+tbl('Total do jogo',tot,true)+ks.map(k=>tbl(`Set ${k} · ${sets[k].us}×${sets[k].them}`,nums.filter(n=>n in ln[k]||sm[k][n]).map(n=>[n,sm[k][n]||Z(),[]]),false)+flow(k)).join('')}
 function alignServe(n){const i=G.court.findIndex(x=>x.n==n);if(i<0)return false;if(i>0)G.court=G.court.slice(i).concat(G.court.slice(0,i));G.serving=true;return i>0}
 function build(init,codes){
  const P=q=>({n:+q.n,name:q.name||'',pos:q.pos}),s=init.starters,six=s.slice(0,6);
