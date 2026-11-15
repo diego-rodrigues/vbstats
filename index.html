@@ -118,7 +118,7 @@ function wa(t){const w=window.open('https://wa.me/?text='+encodeURIComponent(t),
 
 /* ---- lógica de jogo ---- */
 const lb=()=>G.liberoOff?null:G.libero;
-function eff(){const c=G.court.slice(),l=lb();if(l)for(const i of [4,5])if(c[i].pos=='central'){c[i]=l;break}return c}
+function eff(){const c=G.court.slice(),l=lb();if(l)for(const i of G.serving?[4,5]:[0,4,5])if(c[i].pos=='central'){c[i]=l;break}return c}
 const pByN=n=>eff().find(x=>x.n==n);
 const sugg=()=>{if(G.serving)return{p:G.court[0].n,a:'S'};const l=lb();return{p:l&&eff().some(x=>x.n==l.n)?l.n:null,a:'R'}};
 function dfn(e){const l=lb();return l&&e.some(x=>x.n==l.n)?l.n:G.court[0].n}
