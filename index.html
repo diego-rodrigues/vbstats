@@ -28,7 +28,7 @@ input.n{width:56px}input.nm{flex:1}select{width:104px}
 .p{min-height:84px;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:1px;position:relative;padding:4px}
 .p b{font-size:28px;line-height:1}.p small{font-size:13px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.p i{font-size:11px;opacity:.75;font-style:normal}
 .sv{position:absolute;top:2px;right:4px;font-size:13px}
-.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.court.c4{grid-template-columns:repeat(4,1fr)}.p .z{position:absolute;top:2px;left:4px;font-size:10px;opacity:.6}.p.off{opacity:.35}.acts{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
 .res{display:flex;gap:8px;min-height:56px;align-items:center}.res button{flex:1;min-height:56px;font-weight:700}
 .rP{border-color:var(--ok)!important}.rE{border-color:var(--bad)!important}
 .ev{display:grid;grid-template-columns:repeat(auto-fit,minmax(80px,1fr));gap:8px}.ev button{font-size:14px}.dv{display:flex;align-items:center;gap:8px;color:var(--mu);font-size:12px;font-weight:700;letter-spacing:.1em;text-transform:uppercase}.dv::before,.dv::after{content:"";flex:1;height:3px;border-radius:2px;background:var(--bd)}
@@ -97,12 +97,16 @@ function reportHTML(){
   return `<div class="fl"><h3>Evolução dos pontos · maior sequência: ${team} ${best[1]} · ${opp} ${best[0]}</h3>${row(1)}${row(0)}<div class="fr"><b></b><div class="fc">${(c=>a.map(x=>{c[x]++;return `<s class="${x?'u':'t'}">${c[x]==8||c[x]==16?c[x]:''}</s>`}).join(''))([0,0])}</div></div></div>`}
  const tot=nums.map(n=>{const o=Z();ks.forEach(k=>add(o,sm[k][n]));return [n,o,ks.map(k=>ln[k][n]==null?'':ln[k][n])]});
  return back+head+tbl('Total do jogo',tot,true)+ks.map(k=>tbl(`Set ${k} · ${sets[k].us}×${sets[k].them}`,nums.filter(n=>n in ln[k]||sm[k][n]).map(n=>[n,sm[k][n]||Z(),[]]),false)+flow(k)).join('')}
+function assignSlots(){const pref={levantador:['T0'],ponteiro:['T1','B1'],central:['T2','B2'],oposto:['B0']},free=['T0','T1','T2','B0','B1','B2'];
+ G.court.forEach(p=>{const x=(pref[p.pos]||[]).find(k=>free.includes(k));if(x){p.slot=x;free.splice(free.indexOf(x),1)}});
+ G.court.forEach(p=>{if(!p.slot)p.slot=free.shift()});
+ if(G.libero)G.libero.slot='B3'}
 function alignServe(n){const i=G.court.findIndex(x=>x.n==n);if(i<0)return false;if(i>0)G.court=G.court.slice(i).concat(G.court.slice(0,i));G.serving=true;return i>0}
 function build(init,codes){
  const P=q=>({n:+q.n,name:q.name||'',pos:q.pos}),s=init.starters,six=s.slice(0,6);
  if(six.some(p=>p.n===''||isNaN(+p.n)))throw new Error('Preencha a escalação inicial');
  G={court:six.map(P),libero:s[6].n!==''?P(s[6]):null,bench:init.bench.filter(p=>p.n!=='').map(P),us:0,them:0,serving:init.serve,log:[],hist:[],init:JSON.parse(JSON.stringify(init))};
- sel=sugg();let out=null;
+ assignSlots();sel=sugg();let out=null;
  for(let t of String(codes).toUpperCase().split(/[\s,;]+/).filter(Boolean)){
   if(!/^(\d+[SLRABD][PCE0]|\d+[OI]|\/|-)$/.test(t))throw new Error('Código inválido: '+t);
   if(t!='/'&&t!='-')t=nn(parseInt(t))+t.replace(/^\d+/,'');
@@ -110,7 +114,7 @@ function build(init,codes){
   if(t=='/')end('them');else if(t=='-')end('us');
   else{const n=parseInt(t),k=t.slice(-1);
    if(k=='O')out=n;
-   else if(k=='I'){const bi=G.bench.findIndex(x=>x.n==n),tp=G.court.concat(G.libero||[]).find(x=>x.n==out);if(bi<0||!tp)throw new Error('Substituição inválida: '+t);const inn=G.bench[bi];G.bench.splice(bi,1,tp);if(G.libero&&G.libero.n==out)G.libero=inn;else G.court=G.court.map(x=>x.n==out?inn:x);out=null}
+   else if(k=='I'){const bi=G.bench.findIndex(x=>x.n==n),tp=G.court.concat(G.libero||[]).find(x=>x.n==out);if(bi<0||!tp)throw new Error('Substituição inválida: '+t);const inn=G.bench[bi];inn.slot=tp.slot;G.bench.splice(bi,1,tp);if(G.libero&&G.libero.n==out)G.libero=inn;else G.court=G.court.map(x=>x.n==out?inn:x);out=null}
    else{const a=t[t.length-2];if(a=='S')alignServe(n);const o=outc(a,k);if(o)end(o)}}
  }
  sel=sugg()}
@@ -143,7 +147,7 @@ function end(o){
 function snap(){G.hist.push(JSON.stringify({court:G.court,bench:G.bench,libero:G.libero,us:G.us,them:G.them,serving:G.serving,log:G.log,sel:sel}))}
 function act(r){const pl=pByN(sel.p);if(!pl||!sel.a)return;snap();if(sel.a=='S'&&alignServe(pl.n))toast('Rodízio ajustado');G.log.push(nn(pl.n)+sel.a+r);const o=outc(sel.a,r);if(o)end(o);else sel=next(pl,sel.a,r)}
 function openSub(n){if(!G.bench.length)return toast('Sem reservas no banco');modal={t:'sub',t2:pByN(n)}}
-function doSub(bi){const t=modal.t2,inn=G.bench[bi];snap();G.log.push(nn(t.n)+'O',nn(inn.n)+'I');G.bench.splice(bi,1,t);
+function doSub(bi){const t=modal.t2,inn=G.bench[bi];snap();G.log.push(nn(t.n)+'O',nn(inn.n)+'I');inn.slot=t.slot;G.bench.splice(bi,1,t);
  if(G.libero&&G.libero.n==t.n)G.libero=inn;else G.court=G.court.map(x=>x.n==t.n?inn:x);
  if(sel.p==t.n)sel.p=inn.n;modal=null}
 
@@ -164,10 +168,14 @@ function setupHTML(){
 function gameHTML(){
  const e=eff(),sc=G.serving;
  const cell=i=>{const p=e[i];return `<button class="p${sel.p==p.n?' on':''}" data-x="p" data-n="${p.n}">${i==0&&sc?'<span class="sv">🏐</span>':''}<b>${p.n}</b><small>${esc(p.name)}</small><i>${pa(p.pos)}</i></button>`};
+ const sl=s=>{const p=e.find(q=>q.slot==s);
+  if(!p){const h=s=='B3'?G.libero:G.court.find(q=>q.slot==s);return h?`<button class="p off" disabled><b>${h.n}</b><small>${esc(h.name)}</small><i>fora</i></button>`:'<button class="p off" disabled></button>'}
+  return `<button class="p${sel.p==p.n?' on':''}" data-x="p" data-n="${p.n}"><span class="z">Z${e.indexOf(p)+1}</span>${p.n==G.court[0].n&&sc?'<span class="sv">🏐</span>':''}<b>${p.n}</b><small>${esc(p.name)}</small><i>${pa(p.pos)}</i></button>`};
  const rs=sel.a&&sel.p!=null?RES[sel.a].map(([c,l])=>`<button class="r${c}" data-x="r" data-v="${c}">${l}</button>`).join(''):'<span class="mu c" style="flex:1">Escolha jogador e ação</span>';
  return `<div class="hd"><div class="sc"><small>NÓS</small><b>${G.us}</b><span>×</span><b>${G.them}</b><small>ELES</small></div><div class="bt"><button data-x="undo">↶</button><button data-x="fin">Finalizar set</button></div></div>
  <div class="mu c">${sc?'Nós sacamos':'Recepção'}${subMode?' · toque em quem sai':''} · segure um jogador p/ substituir</div>
- <div class="court">${[3,2,1,4,5,0].map(cell).join('')}</div>
+ <div class="court">${['T0','T1','T2'].map(sl).join('')}</div>
+ <div class="court c4">${['B0','B1','B2','B3'].map(sl).join('')}</div>
  <div class="dv">Ação</div><div class="acts">${ACT.map(([c,l])=>`<button class="${sel.a==c?'on':''}" data-x="a" data-v="${c}">${l}</button>`).join('')}</div>
  <div class="dv">Resultado</div><div class="res">${rs}</div>
  <div class="dv">Eventos</div><div class="ev"><button data-x="ev" data-v="/">Ponto adv. /</button><button data-x="ev" data-v="-">Erro adv. -</button><button class="${subMode?'on':''}" data-x="subm">Subst.</button>${G.libero?`<button class="${G.liberoOff?'':'on'}" data-x="lib">Líbero ${G.liberoOff?'fora':'em jogo'}</button>`:''}</div>
@@ -203,7 +211,7 @@ document.addEventListener('click',e=>{
   if(new Set(all).size<all.length)return toast('Há números repetidos');
   const P=q=>({n:+q.n,name:q.name||'',pos:q.pos});
   G={court:six.map(P),libero:s[6].n!==''?P(s[6]):null,bench:setup.bench.filter(p=>p.n!=='').map(P),us:0,them:0,serving:setup.serve,log:[],hist:[],init:JSON.parse(JSON.stringify(setup))};
-  sel=sugg();view='game';break}
+  assignSlots();sel=sugg();view='game';break}
  case 'cont':{const o=sets[i];if(!loadCodes(o.init||setup,o.codes,+i))return;view='game';break}
  case 'impgo':if(!imp.trim())return toast('Cole os códigos');if(!loadCodes(setup,imp,0))return;view='game';break;
  case 'rep':view='report';scrollTo(0,0);break;
@@ -235,5 +243,6 @@ document.addEventListener('click',e=>{
  case 'disc':if(modal.d){G=null;modal=null;view='setup'}else modal.d=1;break;
  }
  sv('sv_game',G);render()});
+if(G&&G.court.some(p=>!p.slot))assignSlots();
 render();
 </script></body></html>
